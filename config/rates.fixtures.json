@@ -1,0 +1,71 @@
+{
+  "source": "simulated",
+  "snapshot_date": "2026-11-07",
+  "corridor": { "from": "RUB", "to": "KGS" },
+  "mid_rates": {
+    "RUB_KGS": "1.085",
+    "RUB_USDC": "0.0108",
+    "USDC_KGS": "100.5"
+  },
+  "routes": {
+    "legacy_transfer": {
+      "label_key": "routes.legacy",
+      "eta_minutes": 180,
+      "uses_solana": false,
+      "hops": [
+        {
+          "step": "legacy_remit",
+          "fixed_fee_from": "350",
+          "spread": "0.045",
+          "rate_pair": "RUB_KGS"
+        }
+      ]
+    },
+    "bank_wire": {
+      "label_key": "routes.bank",
+      "eta_minutes": 1440,
+      "uses_solana": false,
+      "hops": [
+        {
+          "step": "bank_wire",
+          "fixed_fee_from": "800",
+          "spread": "0.025",
+          "rate_pair": "RUB_KGS"
+        }
+      ]
+    },
+    "solana_usdc": {
+      "label_key": "routes.solana",
+      "eta_minutes": 15,
+      "uses_solana": true,
+      "hops": [
+        {
+          "step": "on_ramp",
+          "fixed_fee_from": "50",
+          "spread": "0.008",
+          "rate_pair": "RUB_USDC",
+          "simulated": true
+        },
+        {
+          "step": "solana_transfer",
+          "fixed_fee_from": "0",
+          "spread": "0",
+          "passthrough": true,
+          "simulated": false
+        },
+        {
+          "step": "off_ramp",
+          "fixed_fee_from": "0",
+          "spread": "0.006",
+          "rate_pair": "USDC_KGS",
+          "simulated": true
+        }
+      ]
+    }
+  },
+  "currency_decimals": {
+    "RUB": 2,
+    "KGS": 2,
+    "USDC": 6
+  }
+}
