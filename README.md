@@ -76,7 +76,6 @@ npm test
 /config             rates.fixtures.json
 /locales            ru.json, ky.json, en.json
 /tests              routing engine unit tests
-SPEC.md             product specification
 ```
 
 ## Roadmap
