@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import bs58 from "bs58";
-import { COUNTRY_CALLING_CODES } from "./countryCallingCodes";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export type ValidationResult =
   | { ok: true; value: string }
@@ -13,8 +13,8 @@ export type AmountValidationResult =
 const DEFAULT_AMOUNT_MAX = 1_000_000;
 
 /**
- * Normalize to E.164 (+ and digits). Accepts real international numbers.
- * Legacy KG/RU shortcuts kept: 0XXXXXXXXX → +996…, 8XXXXXXXXXX → +7…
+ * Normalize to E.164. Accepts real international numbers (libphonenumber).
+ * Local shortcuts: KG 0XXXXXXXXX, RU/KZ 8XXXXXXXXXX.
  */
 export function validatePhone(raw: string): ValidationResult {
   if (typeof raw !== "string" || !raw.trim()) {
@@ -23,37 +23,23 @@ export function validatePhone(raw: string): ValidationResult {
   let cleaned = raw.trim().replace(/[\s\-().]/g, "");
   if (cleaned.startsWith("00")) cleaned = `+${cleaned.slice(2)}`;
 
-  // Local Kyrgyz mobile: 0 + 9 digits → +996…
+  let defaultCountry: "KG" | "RU" | undefined;
   if (/^0\d{9}$/.test(cleaned)) {
-    cleaned = `+996${cleaned.slice(1)}`;
-  }
-  // Local Russian trunk: 8 + 10 digits → +7…
-  if (/^8\d{10}$/.test(cleaned)) {
-    cleaned = `+7${cleaned.slice(1)}`;
-  }
-  // Digits without +: assume already includes country code
-  if (/^\d{8,15}$/.test(cleaned)) {
+    defaultCountry = "KG";
+  } else if (/^8\d{10}$/.test(cleaned)) {
+    defaultCountry = "RU";
+  } else if (/^\d{8,15}$/.test(cleaned) && !cleaned.startsWith("+")) {
     cleaned = `+${cleaned}`;
   }
 
-  if (!/^\+\d{8,15}$/.test(cleaned)) {
+  const parsed = defaultCountry
+    ? parsePhoneNumberFromString(cleaned, defaultCountry)
+    : parsePhoneNumberFromString(cleaned);
+
+  if (!parsed || !parsed.isValid()) {
     return { ok: false, code: "phone_invalid" };
   }
-
-  const digits = cleaned.slice(1);
-  const cc = COUNTRY_CALLING_CODES.find((code) => digits.startsWith(code));
-  if (!cc) return { ok: false, code: "phone_invalid" };
-
-  const national = digits.slice(cc.length);
-  // National significant number: typically 4–14 digits; E.164 total ≤ 15.
-  if (national.length < 4 || national.length > 14) {
-    return { ok: false, code: "phone_invalid" };
-  }
-  if (digits.length > 15) {
-    return { ok: false, code: "phone_invalid" };
-  }
-
-  return { ok: true, value: `+${digits}` };
+  return { ok: true, value: parsed.format("E.164") };
 }
 
 /**
