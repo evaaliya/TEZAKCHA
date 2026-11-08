@@ -81,9 +81,32 @@ function loadLocalOnly(): RecipientsFile {
   };
 }
 
+/** Look up phone → pubkey in runtime + local + committed maps (not DEMO fallback). */
+export function getRegisteredPubkey(phoneE164: string): string | null {
+  const phone = normalizePhone(phoneE164);
+  if (!phone) return null;
+  const mem = memoryStore()[phone];
+  if (mem) return mem;
+  const tmp = readJsonFile(path.join("/tmp", "recipients.local.json")).recipients[phone];
+  if (tmp) return tmp;
+  const local = readJsonFile(localPath()).recipients[phone];
+  if (local) return local;
+  const committed = readJsonFile(committedPath()).recipients[phone];
+  if (committed) return committed;
+  return null;
+}
+
+export class RecipientConflictError extends Error {
+  constructor() {
+    super("This number is already registered");
+    this.name = "RecipientConflictError";
+  }
+}
+
 /**
  * Bind a registered user phone to their embedded-wallet pubkey.
- * Prefers config/recipients.local.json locally; on serverless uses memory + /tmp.
+ * First write wins. Never writes config/recipients.json.
+ * Same pubkey → idempotent ok; different pubkey → RecipientConflictError.
  */
 export function upsertRecipientPubkey(phoneE164: string, pubkey: string): void {
   const key = normalizePhone(phoneE164);
@@ -95,6 +118,18 @@ export function upsertRecipientPubkey(phoneE164: string, pubkey: string): void {
     pk = new PublicKey(pubkey).toBase58();
   } catch {
     throw new Error("address_invalid");
+  }
+
+  const existing = getRegisteredPubkey(key);
+  if (existing) {
+    let existingPk: string;
+    try {
+      existingPk = new PublicKey(existing).toBase58();
+    } catch {
+      throw new Error("recipient_pubkey_invalid");
+    }
+    if (existingPk === pk) return;
+    throw new RecipientConflictError();
   }
 
   memoryStore()[key] = pk;

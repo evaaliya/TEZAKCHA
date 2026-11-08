@@ -58,6 +58,8 @@ function ConfirmInner() {
       const key = `errors.${fallback}`;
       const localized = t(key);
       if (localized !== key) return localized;
+      // API may return a human-readable English message (e.g. demo limit).
+      if (/\s/.test(fallback)) return fallback;
     }
     return t("common.error");
   }

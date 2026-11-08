@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { upsertRecipientPubkey } from "@/lib/solana/recipients";
+import {
+  RecipientConflictError,
+  upsertRecipientPubkey,
+} from "@/lib/solana/recipients";
 import { validatePhone, validateSolanaAddress } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
 /**
- * After login: phone (account) → embedded wallet pubkey in recipients.json.
- * So when someone sends TO that phone, USDC goes to this user's wallet.
+ * After login: phone (account) → embedded wallet pubkey (local/memory only).
+ * First registration wins; config/recipients.json is never overwritten.
  */
 export async function POST(request: Request) {
   try {
@@ -34,6 +37,15 @@ export async function POST(request: Request) {
       pubkey: pkCheck.value,
     });
   } catch (e) {
+    if (e instanceof RecipientConflictError) {
+      return NextResponse.json(
+        {
+          error: "This number is already registered",
+          code: "number_already_registered",
+        },
+        { status: 409 },
+      );
+    }
     const msg = e instanceof Error ? e.message : "register_failed";
     return NextResponse.json({ error: msg, code: msg }, { status: 500 });
   }

@@ -68,6 +68,35 @@ npm test
 npm run build
 ```
 
+## Security status (hackathon demo)
+
+Current demo behavior, stated honestly:
+- Sign-in by phone does NOT verify ownership of the number (no SMS code). Anyone can create
+  an account with any number.
+- The embedded wallet key is generated in the browser and stored UNENCRYPTED in local storage.
+  The PIN is a confirmation step in the UI only, it is not verified by the server and does
+  not encrypt the key. Clearing site data or switching device loses access (no recovery).
+- Phone → wallet mappings and history are kept in process memory and a temp file, so they may
+  reset on redeploy (serverless). No user database yet.
+- Registration of a number is first-write-wins, but without phone verification a number can
+  still be claimed by whoever registers it first.
+- The app sponsors network fees. Sends need a funded sender, are rate-limited per IP on
+  prepare/submit, and capped per transfer (`AMOUNT_SEND_MAX`). There is no per-user daily
+  fee budget yet. The fee-payer key lives only in server env.
+- The demo token mint's authority is the same key as the fee payer, so a leak of that key
+  would allow minting demo tokens (devnet only, no market value) and spending its SOL.
+- Everything runs on devnet; demo funds have no market value.
+
+Planned before any real-money use:
+1. Phone verification with a one-time SMS code plus passkey/password as a second factor.
+2. Bot protection and rate limits per IP, number and device on sign-in and send; a daily
+   fee-sponsorship budget per user.
+3. Real key custody: encrypted backup with PIN-derived key, or MPC/custodial signing.
+4. Claim flow: funds for a number are released only after that number is verified.
+5. Server-side database for accounts, mappings, prepares and history, with audit logs.
+6. Separate mint authority and fee payer; secrets in a managed secret store.
+7. KYC/AML via a licensed on/off-ramp partner for real fiat legs.
+
 ## License
 
 Apache-2.0

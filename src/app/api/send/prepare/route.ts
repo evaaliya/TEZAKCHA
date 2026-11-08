@@ -8,6 +8,11 @@ import {
 } from "@/lib/api/sendHelpers";
 import { findPriorSignatureStatus } from "@/lib/solana/confirm";
 import { SolanaApiError } from "@/lib/solana/errors";
+import {
+  allowDailySend,
+  DEMO_LIMIT_MESSAGE,
+  recordDailySend,
+} from "@/lib/solana/rateLimit";
 import { resolveRecipientPubkey } from "@/lib/solana/recipients";
 import {
   assertFeePayerSol,
@@ -25,6 +30,13 @@ import {
 import { validateAmountSend, validatePhone } from "@/lib/validation";
 
 export const runtime = "nodejs";
+
+function demoLimitResponse() {
+  return NextResponse.json(
+    { error: DEMO_LIMIT_MESSAGE, code: "demo_limit_reached" },
+    { status: 429 },
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -101,14 +113,27 @@ export async function POST(request: Request) {
     }
 
     const cfg = loadConfig();
+    if (!allowDailySend()) {
+      return demoLimitResponse();
+    }
     const amountCheck = validateAmountSend(body.amount_send ?? "", cfg.amountSendMax);
     if (!amountCheck.ok) {
+      // Over max send amount → same human demo limit copy.
+      if (amountCheck.code === "amount_invalid") {
+        const n = Number(body.amount_send);
+        if (Number.isFinite(n) && n > cfg.amountSendMax) {
+          return demoLimitResponse();
+        }
+      }
       return NextResponse.json(
         { error: amountCheck.code, code: amountCheck.code },
         { status: 400 },
       );
     }
     const amountSend = amountCheck.value;
+    if (amountSend.gt(cfg.amountSendMax)) {
+      return demoLimitResponse();
+    }
 
     const phoneCheck = validatePhone(body.recipient);
     if (!phoneCheck.ok) {
@@ -183,6 +208,8 @@ export async function POST(request: Request) {
       simulatedFiat: true,
     };
     saveTransfer(record);
+    // Idempotent replays of a live prepare return earlier and are not counted.
+    recordDailySend();
 
     return NextResponse.json({
       prepare_id: prepareId,
