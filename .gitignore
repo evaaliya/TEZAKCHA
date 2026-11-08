@@ -242,3 +242,4 @@ yarn-error.log*
 
 # Keep product spec local — not published with the public repo
 SPEC.md
+vercel-env-paste.txt

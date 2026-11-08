@@ -11,7 +11,7 @@ import {
   formatReferenceLine,
   formatUpdatedClock,
 } from "@/lib/format/referenceLine";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import type { RatesSourceKind, ReferenceRate } from "@/lib/engine";
 import { registerSessionRecipient } from "@/lib/registerRecipient";
 import { loadSession } from "@/lib/session";
@@ -23,7 +23,7 @@ import {
 import { getMethod, HOME_QUICK_METHODS, sendHref } from "@/lib/transferMethods";
 
 export default function HomePage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [recipient, setRecipient] = useState("");
@@ -34,7 +34,6 @@ export default function HomePage() {
   const [referenceRates, setReferenceRates] = useState<ReferenceRate[]>([]);
   const [ratesSource, setRatesSource] = useState<RatesSourceKind | "">("");
   const [ratesUpdatedAt, setRatesUpdatedAt] = useState("");
-  const locales: Locale[] = ["ru", "ky", "en"];
 
   useEffect(() => {
     const session = loadSession();
@@ -105,27 +104,11 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6 pt-1">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-[var(--muted)]">{t("home.greeting", { name: greetingName })}</p>
-          <h1 className="mt-1 font-display text-[1.7rem] leading-tight tracking-tight">
-            {t("home.title")}
-          </h1>
-        </div>
-        <div className="flex gap-1 rounded-full bg-black/[0.04] p-1 text-[10px] font-medium">
-          {locales.map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLocale(l)}
-              className={`rounded-full px-2 py-1 ${
-                locale === l ? "bg-white text-[var(--ink)] shadow-sm" : "text-[var(--muted)]"
-              }`}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
+      <div>
+        <p className="text-sm text-[var(--muted)]">{t("home.greeting", { name: greetingName })}</p>
+        <h1 className="mt-1 font-display text-[1.7rem] leading-tight tracking-tight">
+          {t("home.title")}
+        </h1>
       </div>
 
       <BalanceChip />
