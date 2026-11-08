@@ -138,7 +138,7 @@ FEE_PAYER needs SOL first (now ${sol}).
     process.exit(0);
   }
 
-  const amount = 10_000n * 1_000_000n; // 10_000.000000 demo USDC
+  const amount = BigInt(10_000) * BigInt(1_000_000); // 10_000.000000 demo USDC
   for (const pk of targets) {
     const owner = new PublicKey(pk);
     const ata = getAssociatedTokenAddressSync(mintPubkey, owner);

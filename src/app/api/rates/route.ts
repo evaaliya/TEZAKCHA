@@ -12,6 +12,7 @@ export async function GET() {
       rates_snapshot_date: rates.snapshot_date,
       rates_version: rates.rates_version,
       rates_updated_at: rates.rates_updated_at,
+      mid_rates: rates.mid_rates,
       reference_rates: rates.reference_rates ?? [],
       corridor: rates.corridor,
     });
