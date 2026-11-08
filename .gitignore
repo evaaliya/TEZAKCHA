@@ -240,6 +240,4 @@ yarn-error.log*
 # Local hackathon reference material (not for the public repo)
 .hackathon/
 
-# Keep product spec local — not published with the public repo
-SPEC.md
 vercel-env-paste.txt
