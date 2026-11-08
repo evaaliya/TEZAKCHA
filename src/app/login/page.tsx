@@ -50,8 +50,12 @@ export default function LoginPage() {
         phone: phoneCheck.value,
         email: emailTrim || undefined,
       });
-      // Bind this phone to the embedded wallet so incoming transfers resolve here.
-      await registerSessionRecipient(phoneCheck.value);
+      // Bind phone → embedded wallet. Non-fatal on serverless (read-only FS).
+      try {
+        await registerSessionRecipient(phoneCheck.value);
+      } catch {
+        /* send still works via DEMO_RECIPIENT / later re-register on home */
+      }
       router.push("/");
     } catch {
       setError(t("common.error"));

@@ -10,7 +10,18 @@ interface RecipientsFile {
 export type RecipientSource =
   | "recipients.local.json"
   | "recipients.json"
-  | "DEMO_RECIPIENT_PUBKEY";
+  | "DEMO_RECIPIENT_PUBKEY"
+  | "memory";
+
+type GlobalRecipients = typeof globalThis & {
+  __tezakchaRecipients?: Record<string, string>;
+};
+
+function memoryStore(): Record<string, string> {
+  const g = globalThis as GlobalRecipients;
+  if (!g.__tezakchaRecipients) g.__tezakchaRecipients = {};
+  return g.__tezakchaRecipients;
+}
 
 let cached: RecipientsFile | null = null;
 
@@ -23,11 +34,23 @@ function localPath(): string {
   return path.join(process.cwd(), "config", "recipients.local.json");
 }
 
+/** On Vercel the app FS is read-only — use /tmp for runtime registrations. */
+function writableLocalPath(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join("/tmp", "recipients.local.json");
+  }
+  return localPath();
+}
+
 function readJsonFile(filePath: string): RecipientsFile {
   if (!existsSync(filePath)) return { recipients: {} };
-  const raw = readFileSync(filePath, "utf8");
-  const parsed = JSON.parse(raw) as RecipientsFile;
-  return { recipients: parsed.recipients ?? {} };
+  try {
+    const raw = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw) as RecipientsFile;
+    return { recipients: parsed.recipients ?? {} };
+  } catch {
+    return { recipients: {} };
+  }
 }
 
 /**
@@ -38,19 +61,29 @@ function loadRecipientsFile(): RecipientsFile {
   if (cached) return cached;
   const base = readJsonFile(committedPath());
   const local = readJsonFile(localPath());
+  const tmp = readJsonFile(path.join("/tmp", "recipients.local.json"));
+  const mem = memoryStore();
   cached = {
-    recipients: { ...base.recipients, ...local.recipients },
+    recipients: {
+      ...base.recipients,
+      ...local.recipients,
+      ...tmp.recipients,
+      ...mem,
+    },
   };
   return cached;
 }
 
 function loadLocalOnly(): RecipientsFile {
-  return readJsonFile(localPath());
+  const disk = readJsonFile(writableLocalPath());
+  return {
+    recipients: { ...disk.recipients, ...memoryStore() },
+  };
 }
 
 /**
  * Bind a registered user phone to their embedded-wallet pubkey.
- * Writes ONLY to recipients.local.json (gitignored) — not the repo file.
+ * Prefers config/recipients.local.json locally; on serverless uses memory + /tmp.
  */
 export function upsertRecipientPubkey(phoneE164: string, pubkey: string): void {
   const key = normalizePhone(phoneE164);
@@ -63,10 +96,21 @@ export function upsertRecipientPubkey(phoneE164: string, pubkey: string): void {
   } catch {
     throw new Error("address_invalid");
   }
+
+  memoryStore()[key] = pk;
+
   const local = loadLocalOnly();
   local.recipients[key] = pk;
-  writeFileSync(localPath(), `${JSON.stringify(local, null, 2)}\n`, "utf8");
-  cached = null; // force reload merge next read
+  try {
+    writeFileSync(
+      writableLocalPath(),
+      `${JSON.stringify(local, null, 2)}\n`,
+      "utf8",
+    );
+  } catch {
+    // Read-only FS /tmp race — memory still holds the binding for this instance.
+  }
+  cached = null;
 }
 
 /** Normalize phone for lookup: keep leading +, strip spaces/dashes. */
@@ -83,6 +127,30 @@ export function resolveRecipientPubkey(recipientPhone: string): {
   source: RecipientSource;
 } | null {
   const phone = normalizePhone(recipientPhone);
+  const mem = memoryStore();
+  if (phone && mem[phone]) {
+    try {
+      return {
+        pubkey: new PublicKey(mem[phone]).toBase58(),
+        source: "memory",
+      };
+    } catch {
+      throw new Error("recipient_pubkey_invalid");
+    }
+  }
+
+  const tmp = readJsonFile(path.join("/tmp", "recipients.local.json"));
+  if (phone && tmp.recipients[phone]) {
+    try {
+      return {
+        pubkey: new PublicKey(tmp.recipients[phone]).toBase58(),
+        source: "recipients.local.json",
+      };
+    } catch {
+      throw new Error("recipient_pubkey_invalid");
+    }
+  }
+
   const local = readJsonFile(localPath());
   if (phone && local.recipients[phone]) {
     try {
@@ -107,7 +175,6 @@ export function resolveRecipientPubkey(recipientPhone: string): {
     }
   }
 
-  // Keep merge cache warm for callers that only upsert/load elsewhere.
   loadRecipientsFile();
 
   const cfg = loadConfig();
@@ -123,4 +190,6 @@ export function resolveRecipientPubkey(recipientPhone: string): {
 /** Test helper */
 export function resetRecipientsCacheForTests(): void {
   cached = null;
+  const g = globalThis as GlobalRecipients;
+  g.__tezakchaRecipients = {};
 }
