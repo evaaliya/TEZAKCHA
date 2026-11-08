@@ -101,7 +101,7 @@ export default function LoginPage() {
             className="field"
             inputMode="tel"
             autoComplete="tel"
-            placeholder="+996 700 000 000"
+            placeholder="+1 415 555 2671"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required

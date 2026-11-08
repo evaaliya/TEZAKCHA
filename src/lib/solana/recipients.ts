@@ -87,7 +87,7 @@ function loadLocalOnly(): RecipientsFile {
  */
 export function upsertRecipientPubkey(phoneE164: string, pubkey: string): void {
   const key = normalizePhone(phoneE164);
-  if (!key.startsWith("+996")) {
+  if (!/^\+\d{8,15}$/.test(key)) {
     throw new Error("phone_invalid");
   }
   let pk: string;

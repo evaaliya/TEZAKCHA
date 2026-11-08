@@ -147,7 +147,7 @@ function SendInner() {
           inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder={to === "KGS" ? "+996 …" : "+7 …"}
+          placeholder="+996 … / +7 … / +1 …"
           required
         />
       </label>

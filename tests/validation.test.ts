@@ -12,7 +12,7 @@ import { POST as qrParse } from "@/app/api/qr/parse/route";
 describe("validatePhone", () => {
   const expected = "+996700123456";
 
-  it("accepts all allowed formats as the same E.164", () => {
+  it("accepts Kyrgyz formats as the same E.164", () => {
     const inputs = [
       "+996700123456",
       "996700123456",
@@ -28,8 +28,23 @@ describe("validatePhone", () => {
     }
   });
 
+  it("accepts international E.164 numbers", () => {
+    const cases: Array<[string, string]> = [
+      ["+1 415 555 2671", "+14155552671"],
+      ["+79001234567", "+79001234567"],
+      ["8 900 123 45 67", "+79001234567"],
+      ["+44 7911 123456", "+447911123456"],
+      ["+77001234567", "+77001234567"],
+    ];
+    for (const [input, want] of cases) {
+      const r = validatePhone(input);
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value).toBe(want);
+    }
+  });
+
   it("rejects invalid phones", () => {
-    for (const input of ["", "123", "+77001234567", "99670012345", "abc", "+996"]) {
+    for (const input of ["", "123", "+72 999 99 99 99", "abc", "+996", "+1"]) {
       const r = validatePhone(input);
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.code).toBe("phone_invalid");

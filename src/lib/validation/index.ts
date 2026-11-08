@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import bs58 from "bs58";
+import { COUNTRY_CALLING_CODES } from "./countryCallingCodes";
 
 export type ValidationResult =
   | { ok: true; value: string }
@@ -12,28 +13,47 @@ export type AmountValidationResult =
 const DEFAULT_AMOUNT_MAX = 1_000_000;
 
 /**
- * Normalize Kyrgyz phone to +996XXXXXXXXX (9 national digits after 996).
- * Accepts: 0XXXXXXXXX, 996XXXXXXXXX, +996XXXXXXXXX, spaced/dashed variants.
+ * Normalize to E.164 (+ and digits). Accepts real international numbers.
+ * Legacy KG/RU shortcuts kept: 0XXXXXXXXX → +996…, 8XXXXXXXXXX → +7…
  */
 export function validatePhone(raw: string): ValidationResult {
   if (typeof raw !== "string" || !raw.trim()) {
     return { ok: false, code: "phone_invalid" };
   }
-  const digits = raw.trim().replace(/[\s\-()]/g, "");
-  let national: string | null = null;
+  let cleaned = raw.trim().replace(/[\s\-().]/g, "");
+  if (cleaned.startsWith("00")) cleaned = `+${cleaned.slice(2)}`;
 
-  if (/^\+996\d{9}$/.test(digits)) {
-    national = digits.slice(1); // 996XXXXXXXXX
-  } else if (/^996\d{9}$/.test(digits)) {
-    national = digits;
-  } else if (/^0\d{9}$/.test(digits)) {
-    national = `996${digits.slice(1)}`;
+  // Local Kyrgyz mobile: 0 + 9 digits → +996…
+  if (/^0\d{9}$/.test(cleaned)) {
+    cleaned = `+996${cleaned.slice(1)}`;
+  }
+  // Local Russian trunk: 8 + 10 digits → +7…
+  if (/^8\d{10}$/.test(cleaned)) {
+    cleaned = `+7${cleaned.slice(1)}`;
+  }
+  // Digits without +: assume already includes country code
+  if (/^\d{8,15}$/.test(cleaned)) {
+    cleaned = `+${cleaned}`;
   }
 
-  if (!national || !/^996\d{9}$/.test(national)) {
+  if (!/^\+\d{8,15}$/.test(cleaned)) {
     return { ok: false, code: "phone_invalid" };
   }
-  return { ok: true, value: `+${national}` };
+
+  const digits = cleaned.slice(1);
+  const cc = COUNTRY_CALLING_CODES.find((code) => digits.startsWith(code));
+  if (!cc) return { ok: false, code: "phone_invalid" };
+
+  const national = digits.slice(cc.length);
+  // National significant number: typically 4–14 digits; E.164 total ≤ 15.
+  if (national.length < 4 || national.length > 14) {
+    return { ok: false, code: "phone_invalid" };
+  }
+  if (digits.length > 15) {
+    return { ok: false, code: "phone_invalid" };
+  }
+
+  return { ok: true, value: `+${digits}` };
 }
 
 /**

@@ -1,5 +1,5 @@
 export interface Session {
-  /** E.164 Kyrgyz phone, e.g. +996700112233 — primary account id */
+  /** E.164 phone, e.g. +996700112233 or +14155552671 — primary account id */
   phone: string;
   /** Optional */
   email?: string;
