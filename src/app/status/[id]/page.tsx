@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { TransferRecord } from "@/lib/store/transfers";
+import { sendHref } from "@/lib/transferMethods";
+import type { PublicTransfer } from "@/lib/transferPublic";
+import { isSuccessStatus } from "@/lib/transferStatus";
 
 export default function StatusPage() {
-  const { t, formatMoney } = useI18n();
+  const { t, formatMoney, locale } = useI18n();
   const params = useParams<{ id: string }>();
-  const [transfer, setTransfer] = useState<TransferRecord | null>(null);
+  const [transfer, setTransfer] = useState<PublicTransfer | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -29,62 +31,113 @@ export default function StatusPage() {
     return <p className="mt-10 text-center text-[var(--muted)]">{t("common.loading")}</p>;
   }
 
-  const statusLabel =
-    transfer.status === "delivered"
-      ? t("status.delivered")
-      : transfer.status === "failed"
-        ? t("status.failed")
-        : t("status.pending");
-
-  const demoMode = transfer.signature?.startsWith("demo_");
+  const success = isSuccessStatus(transfer.status);
+  const localeTag = locale === "ky" ? "ky-KG" : locale === "ru" ? "ru-RU" : "en-US";
+  const when = new Date(transfer.createdAt).toLocaleString(localeTag, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div className="space-y-5 pt-4">
-      <h1 className="font-display text-3xl tracking-tight">{t("status.title")}</h1>
-
       <div className="rounded-2xl bg-white p-5 shadow-soft">
-        <p
-          className={`text-sm font-semibold uppercase tracking-wide ${
-            transfer.status === "delivered"
-              ? "text-[var(--accent-deep)]"
-              : transfer.status === "failed"
-                ? "text-red-700"
-                : "text-amber-700"
-          }`}
-        >
-          {statusLabel}
-        </p>
-        <p className="mt-3 text-3xl font-semibold">
-          {formatMoney(transfer.amountReceive, transfer.toCurrency)}
-        </p>
-        <p className="mt-1 text-[var(--muted)]">
-          {transfer.recipientName} · {formatMoney(transfer.amountSend, transfer.fromCurrency)}
-        </p>
-
-        {demoMode && (
-          <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {t("status.demo")}
+        <div className="flex flex-col items-center text-center">
+          <span
+            className={`flex h-14 w-14 items-center justify-center rounded-full text-2xl ${
+              success
+                ? "bg-[var(--mint-soft)] text-[var(--accent-deep)]"
+                : "bg-amber-50 text-amber-800"
+            }`}
+            aria-hidden
+          >
+            {success ? "✓" : "!"}
+          </span>
+          <p
+            className={`mt-3 text-lg font-semibold ${
+              success ? "text-[var(--accent-deep)]" : "text-amber-800"
+            }`}
+          >
+            {success ? t("history.detail.sent") : t("status.pending")}
           </p>
-        )}
+        </div>
 
-        {transfer.explorerUrl && (
+        <div className="mt-5 space-y-3 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("confirm.you_send")}</span>
+            <span className="font-semibold">
+              {formatMoney(transfer.amountSend, transfer.fromCurrency)}
+            </span>
+          </div>
+
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("confirm.they_get")}</span>
+            <span className="text-right">
+              <span className="font-semibold text-[var(--accent-deep)]">
+                {formatMoney(transfer.amountReceive, transfer.toCurrency)}
+              </span>
+              <span className="mt-0.5 block text-[11px] font-medium text-[var(--muted)]">
+                {t("status.estimate")}
+              </span>
+            </span>
+          </div>
+
+          <div className="h-px bg-black/5" />
+
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("history.detail.recipient")}</span>
+            <span className="text-right font-medium">
+              {transfer.recipientName}
+              <span className="mt-0.5 block font-normal text-[var(--muted)]">
+                {transfer.recipientPhone}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("history.detail.date")}</span>
+            <span className="font-medium">{when}</span>
+          </div>
+
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("routes.fee")}</span>
+            <span className="font-medium">{t("status.fee_included")}</span>
+          </div>
+
+          <div className="flex justify-between gap-3">
+            <span className="text-[var(--muted)]">{t("routes.eta")}</span>
+            <span className="font-medium">{t("routes.minutes", { n: 15 })}</span>
+          </div>
+        </div>
+      </div>
+
+      <Link href="/" className="btn btn-primary">
+        {t("status.done")}
+      </Link>
+      <Link
+        href={sendHref("smart", {
+          name: transfer.recipientName,
+          phone: transfer.recipientPhone,
+        })}
+        className="btn btn-ghost"
+      >
+        {t("history.detail.repeat")}
+      </Link>
+
+      {transfer.explorerUrl ? (
+        <p className="pt-1 text-center">
           <a
             href={transfer.explorerUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-4 inline-flex text-sm font-medium text-[var(--accent-deep)] underline"
+            className="text-xs text-[var(--muted)] underline"
           >
-            {t("status.explorer")}
+            {t("status.check_network")}
           </a>
-        )}
-      </div>
-
-      <Link href={`/receive/${transfer.id}`} className="btn btn-primary">
-        {t("status.to_recipient")}
-      </Link>
-      <Link href="/send" className="btn btn-ghost">
-        {t("status.again")}
-      </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

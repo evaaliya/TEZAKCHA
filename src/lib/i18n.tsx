@@ -29,7 +29,7 @@ const I18nContext = createContext<I18nValue | null>(null);
 const STORAGE_KEY = "tezakcha_locale";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("ru");
+  const [locale, setLocaleState] = useState<Locale>("en");
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;

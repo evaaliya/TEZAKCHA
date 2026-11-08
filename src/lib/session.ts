@@ -1,5 +1,8 @@
 export interface Session {
+  /** E.164 Kyrgyz phone, e.g. +996700112233 — primary account id */
   phone: string;
+  /** Optional */
+  email?: string;
   name?: string;
 }
 
@@ -10,7 +13,16 @@ export function loadSession(): Session | null {
   const raw = window.localStorage.getItem(KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as Session;
+    const parsed = JSON.parse(raw) as Partial<Session>;
+    if (!parsed.phone || typeof parsed.phone !== "string") {
+      window.localStorage.removeItem(KEY);
+      return null;
+    }
+    return {
+      phone: parsed.phone,
+      email: parsed.email,
+      name: parsed.name,
+    };
   } catch {
     return null;
   }

@@ -152,6 +152,12 @@ activemq-data/
 # Environments
 .env
 .envrc
+.devnet-recipient.secret
+.devnet-*.secret
+.e2e-*.secret
+.DS_Store
+# Phone → pubkey map written at login (real numbers). Never commit.
+config/recipients.local.json
 .venv
 env/
 venv/

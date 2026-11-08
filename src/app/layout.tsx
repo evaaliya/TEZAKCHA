@@ -16,7 +16,7 @@ const sans = Manrope({
 
 export const metadata: Metadata = {
   title: "TEZAKCHA",
-  description: "Banking-style remittances settled on Solana",
+  description: "Compare and send money between Russia and Kyrgyzstan, bank-style",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru">
+    <html lang="en">
       <body className={`${display.variable} ${sans.variable} font-sans antialiased`}>
         <I18nProvider>
           <AppShell>{children}</AppShell>

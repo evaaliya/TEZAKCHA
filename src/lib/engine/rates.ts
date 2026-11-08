@@ -1,18 +1,19 @@
-import fs from "node:fs";
-import path from "node:path";
-import type { RatesSnapshot } from "./types";
+import {
+  getFixturesRatesSnapshot,
+  getLiveRatesSnapshot,
+  type VersionedRatesSnapshot,
+} from "@/lib/rates/live";
 
-export function loadRatesFixtures(): RatesSnapshot {
-  const filePath = path.join(process.cwd(), "config", "rates.fixtures.json");
-  const raw = fs.readFileSync(filePath, "utf8");
-  return JSON.parse(raw) as RatesSnapshot;
-}
+export { loadRatesFixtures, finalizeRatesSnapshot } from "./snapshot";
 
-export function getRatesSnapshot(): RatesSnapshot {
-  const source = process.env.RATES_SOURCE ?? "fixtures";
-  if (source !== "fixtures") {
-    // Live adapter placeholder — fixtures remain the default for the hackathon demo.
-    return loadRatesFixtures();
+/**
+ * Default RATES_SOURCE=live. fixtures keeps the on-disk snapshot only.
+ * Live path: fresh → last-good (live_stale) → fixtures snapshot.
+ */
+export async function getRatesSnapshot(): Promise<VersionedRatesSnapshot> {
+  const source = (process.env.RATES_SOURCE ?? "live").toLowerCase();
+  if (source === "fixtures") {
+    return getFixturesRatesSnapshot();
   }
-  return loadRatesFixtures();
+  return getLiveRatesSnapshot();
 }

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { TransferRecord } from "@/lib/store/transfers";
+import type { PublicTransfer } from "@/lib/transferPublic";
+import { statusI18nKey, statusToneClass } from "@/lib/transferStatus";
 
 export default function ReceivePage() {
   const { t, formatMoney } = useI18n();
   const params = useParams<{ id: string }>();
-  const [transfer, setTransfer] = useState<TransferRecord | null>(null);
+  const [transfer, setTransfer] = useState<PublicTransfer | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -25,20 +26,37 @@ export default function ReceivePage() {
 
   return (
     <div className="flex flex-1 flex-col justify-between gap-8 pt-6">
-      <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-[var(--accent-deep)]">
-          {t("receive.from")}
-        </p>
-        <h1 className="mt-2 font-display text-4xl leading-tight tracking-tight">
-          {t("receive.title")}
-        </h1>
-        <p className="mt-8 text-sm text-[var(--muted)]">{t("receive.amount")}</p>
-        <p className="mt-1 text-5xl font-semibold tracking-tight text-[var(--ink)]">
-          {formatMoney(transfer.amountReceive, transfer.toCurrency)}
-        </p>
-        <p className="mt-6 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          {t("receive.note")}
-        </p>
+      <div className="space-y-5">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-wide text-[var(--accent-deep)]">
+            {t("receive.from")}
+          </p>
+          <h1 className="mt-2 font-display text-4xl leading-tight tracking-tight">
+            {t("receive.title")}
+          </h1>
+          <p className={`mt-3 text-sm font-semibold ${statusToneClass(transfer.status)}`}>
+            {t(statusI18nKey(transfer.status))}
+          </p>
+          <p className="mt-8 text-sm text-[var(--muted)]">{t("receive.amount")}</p>
+          <p className="mt-1 text-5xl font-semibold tracking-tight text-[var(--ink)]">
+            {formatMoney(transfer.amountReceive, transfer.toCurrency)}
+          </p>
+          <p className="mt-2 text-xs leading-snug text-[var(--muted)]">
+            {t("receive.fiat_estimate")}
+          </p>
+        </div>
+        {transfer.explorerUrl ? (
+          <p className="text-center">
+            <a
+              href={transfer.explorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-[var(--muted)] underline"
+            >
+              {t("status.check_network")}
+            </a>
+          </p>
+        ) : null}
       </div>
       <Link href="/history" className="btn btn-primary">
         {t("nav.history")}
