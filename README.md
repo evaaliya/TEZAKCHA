@@ -29,6 +29,16 @@ margins. TEZAKCHA shows it on one screen, in an interface that feels like a bank
   NBKR states cash-ruble fees of 8–10% (July 2026), non-cash transfers are cheaper.
 - Devnet stablecoin has no market value; the balance in the UI is a demo balance.
 
+## MEASURED (Nov 8, 2026)
+
+- Exit leg, xbt.kg: USDT→KGS 87.4 vs NBKR official 87.45 (~0.06% below official).
+- Entry leg, RUB→USDT: market ~81.9 RUB per USDT; P2P ~83–84; online exchangers ~84–86
+  (source: public price summary, to be re-checked with P2P screenshots).
+- Resulting end-to-end cost for 10,000 RUB: roughly 1.5–2.7% via P2P, ~4.9% via online exchangers.
+- Our demo Express figure (1.35%) assumes a favorable entry rate.
+- Not validated: whether xbt.kg accepts USDT/USDC on the Solana network, and compliance/freezing
+  risk on entry (xbt.kg warns that funds from some Russian exchanges may be frozen for review).
+
 ## Choices and limits
 
 - Signing uses an **embedded wallet** (browser key under the UI, confirmed with a PIN)
